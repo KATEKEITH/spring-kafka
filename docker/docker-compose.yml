@@ -1,0 +1,73 @@
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft 모드 설정
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A'
+
+      ### Producer ###
+      KAFKA_BATCH_SIZE: 4194304                # 배치 크기
+      KAFKA_LINGER_MS: 10                      # 배치 지연 시간
+      KAFKA_COMPRESSION_TYPE: 'zstd'           # 메시지 압축 방식
+      KAFKA_MAX_REQUEST_SIZE: 4194304          # 최대 요청 크기
+      
+      ### Broker ###
+      # JVM 설정
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
+      KAFKA_JVM_PERFORMANCE_OPTS: "-server -XX:+UseG1GC -XX:MaxGCPauseMillis=20 -XX:InitiatingHeapOccupancyPercent=35 -XX:+ExplicitGCInvokesConcurrent"
+      
+      # 네트워크/IO 설정
+      KAFKA_NUM_NETWORK_THREADS: 4             # 네트워크 처리 스레드
+      KAFKA_NUM_IO_THREADS: 4                  # 디스크 I/O 스레드
+      KAFKA_SOCKET_SEND_BUFFER_BYTES: 1048576  # 소켓 송신 버퍼 1MB
+      KAFKA_SOCKET_RECEIVE_BUFFER_BYTES: 1048576 # 소켓 수신 버퍼 1MB
+      
+      # 스토리지 설정
+      KAFKA_LOG_RETENTION_BYTES: 1073741824    # 로그 보관 크기 1GB
+      KAFKA_LOG_RETENTION_HOURS: 24            # 로그 보관 시간
+      
+      # 토픽/파티션 설정
+      KAFKA_NUM_PARTITIONS: 8                  # 기본 파티션 수
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1      # 복제 팩터
+      KAFKA_MESSAGE_MAX_BYTES: 1572864         # 메시지 최대 크기 ~1.5MB9    
+
+      ### Consumer ###
+      KAFKA_FETCH_MAX_BYTES: 52428800         # 최대 fetch 크기 50MB
+      KAFKA_FETCH_MAX_WAIT_MS: 500            # fetch 대기 시간
+
+      # 리스너 설정
+      KAFKA_LISTENERS: CONTROLLER://kafka:19093,INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9093,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+
+      # 내부 토픽 설정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+      # 모니터링 설정
+      KAFKA_JMX_PORT: 9999
+      KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=kafka"
+
+      # 기타 설정
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    networks:
+      - kafka-net
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+networks:
+  kafka-net:
+    driver: bridge
